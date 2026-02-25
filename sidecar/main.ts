@@ -1,7 +1,7 @@
 import path from "node:path";
 import { processManager } from "./process-manager.js";
 import { buildServices } from "./constants.js";
-import { addRepo, removeRepo, toggleFavourite, getFavourites, renameScript, getAliases } from "./config.js";
+import { addRepo, removeRepo, renameScript, getAliases, getWorkflows, createWorkflow, updateWorkflow, deleteWorkflow, reorderWorkflows } from "./config.js";
 import { scanRepoScripts } from "./repo-scanner.js";
 import type { Command, Event } from "./protocol.js";
 import type { ServiceDef } from "./types.js";
@@ -17,7 +17,6 @@ function refreshServices() {
 }
 
 function emitServiceList() {
-  const favs = getFavourites();
   const aliases = getAliases();
   emit({
     type: "services",
@@ -28,10 +27,13 @@ function emitServiceList() {
       repoPath: s.cwd,
       port: s.port,
       color: s.color,
-      favourite: favs.includes(s.id),
       alias: aliases[s.id],
     })),
   });
+}
+
+function emitWorkflows() {
+  emit({ type: "workflows", workflows: getWorkflows() });
 }
 
 // Wire up status and log events
@@ -49,6 +51,7 @@ async function handleCommand(cmd: Command) {
     case "list":
       refreshServices();
       emitServiceList();
+      emitWorkflows();
       break;
 
     case "start": {
@@ -95,15 +98,56 @@ async function handleCommand(cmd: Command) {
       break;
     }
 
-    case "toggle-favourite": {
-      toggleFavourite(cmd.id);
+    case "rename-script": {
+      renameScript(cmd.id, cmd.alias);
       emitServiceList();
       break;
     }
 
-    case "rename-script": {
-      renameScript(cmd.id, cmd.alias);
-      emitServiceList();
+    case "get-workflows":
+      emitWorkflows();
+      break;
+
+    case "create-workflow":
+      createWorkflow(cmd.name, cmd.scriptIds);
+      emitWorkflows();
+      break;
+
+    case "update-workflow":
+      updateWorkflow(cmd.id, { name: cmd.name, scriptIds: cmd.scriptIds, collapsed: cmd.collapsed });
+      emitWorkflows();
+      break;
+
+    case "delete-workflow":
+      deleteWorkflow(cmd.id);
+      emitWorkflows();
+      break;
+
+    case "reorder-workflows":
+      reorderWorkflows(cmd.ids);
+      emitWorkflows();
+      break;
+
+    case "start-workflow": {
+      const wfs = getWorkflows();
+      const wf = wfs.find((w) => w.id === cmd.id);
+      if (wf) {
+        for (const scriptId of wf.scriptIds) {
+          const svc = services.find((s) => s.id === scriptId);
+          if (svc) processManager.start(svc);
+        }
+      }
+      break;
+    }
+
+    case "stop-workflow": {
+      const wfs = getWorkflows();
+      const wf = wfs.find((w) => w.id === cmd.id);
+      if (wf) {
+        for (const scriptId of wf.scriptIds) {
+          processManager.stop(scriptId);
+        }
+      }
       break;
     }
   }
