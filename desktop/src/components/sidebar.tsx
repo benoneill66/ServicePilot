@@ -2,6 +2,46 @@ import { useMemo, useState, useRef, useEffect } from "react";
 import type { ServiceInfo, ServiceStatus, Workflow } from "../types";
 import { WorkflowModal } from "./workflow-modal";
 
+interface MenuItem {
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+}
+
+function ContextMenu({ x, y, items, onClose }: { x: number; y: number; items: MenuItem[]; onClose: () => void }) {
+  useEffect(() => {
+    const handler = () => onClose();
+    // Use setTimeout to avoid the context menu's own event closing it
+    const id = setTimeout(() => window.addEventListener("click", handler), 0);
+    return () => { clearTimeout(id); window.removeEventListener("click", handler); };
+  }, [onClose]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed bg-surface border border-border rounded shadow-lg py-1 z-50"
+      style={{ left: x, top: y }}
+    >
+      {items.map((item, i) => (
+        <button
+          key={i}
+          onClick={() => { item.onClick(); onClose(); }}
+          className={`block w-full text-left text-[11px] px-3 py-1 hover:bg-surface-hover transition-colors ${
+            item.danger ? "text-red hover:bg-red/10" : "text-text"
+          }`}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 const STATUS_CONFIG: Record<ServiceStatus, { dotColor: string; glowClass: string }> = {
   stopped:  { dotColor: "border border-gray-500 bg-transparent", glowClass: "" },
   starting: { dotColor: "bg-yellow animate-pulse", glowClass: "dot-glow-yellow" },
@@ -37,6 +77,7 @@ function ScriptRow({
   onToggle,
   onRename,
   showRepo,
+  onContextMenu: onCtxMenu,
 }: {
   svc: ServiceInfo;
   status: ServiceStatus;
@@ -45,6 +86,7 @@ function ScriptRow({
   onToggle: (id: string, running: boolean) => void;
   onRename: (id: string, alias: string) => void;
   showRepo?: boolean;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }) {
   const config = STATUS_CONFIG[status];
   const isRunning = status === "running" || status === "starting";
@@ -76,6 +118,7 @@ function ScriptRow({
           : "hover:bg-surface-hover border-l-2 border-l-transparent pl-[14px]"
       }`}
       onClick={onSelect}
+      onContextMenu={onCtxMenu}
     >
       <div className={`w-2 h-2 rounded-full shrink-0 ${config.dotColor} ${config.glowClass}`} />
 
@@ -158,6 +201,7 @@ export function Sidebar({
   const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
   // Default "All Scripts" to collapsed when workflows exist
   const [allScriptsCollapsed, setAllScriptsCollapsed] = useState(true);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
 
   const repos = useMemo(() => {
     const map = new Map<string, { name: string; path: string; services: ServiceInfo[] }>();
@@ -246,6 +290,17 @@ export function Sidebar({
                   <div
                     className="group flex items-center gap-1.5 px-2 py-1.5 border-t border-border cursor-pointer hover:bg-surface-hover select-none"
                     onClick={() => onUpdateWorkflow(wf.id, undefined, undefined, !wf.collapsed)}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setContextMenu({
+                        x: e.clientX,
+                        y: e.clientY,
+                        items: [
+                          { label: "Edit Scripts...", onClick: () => { setEditingWorkflow(wf); setShowModal(true); } },
+                          { label: "Delete", onClick: () => onDeleteWorkflow(wf.id), danger: true },
+                        ],
+                      });
+                    }}
                   >
                     <span
                       className={`text-[10px] text-text-dim transition-transform ${
@@ -436,6 +491,24 @@ export function Sidebar({
                             onSelect={() => onSelect(svc.id)}
                             onToggle={onToggle}
                             onRename={onRenameScript}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              const menuItems: MenuItem[] = workflows.length > 0
+                                ? workflows.map((wf) => ({
+                                    label: `Add to "${wf.name}"`,
+                                    onClick: () => {
+                                      if (!wf.scriptIds.includes(svc.id)) {
+                                        onUpdateWorkflow(wf.id, undefined, [...wf.scriptIds, svc.id]);
+                                      }
+                                    },
+                                  }))
+                                : [{ label: "No workflows yet", onClick: () => {} }];
+                              setContextMenu({
+                                x: e.clientX,
+                                y: e.clientY,
+                                items: menuItems,
+                              });
+                            }}
                           />
                         ))}
                     </div>
@@ -446,6 +519,15 @@ export function Sidebar({
           </div>
         )}
       </div>
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextMenu.items}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
 
       {/* Workflow Modal */}
       {showModal && (
