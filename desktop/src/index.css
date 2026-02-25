@@ -25,3 +25,14 @@ html, body, #root {
   overflow: hidden;
   user-select: none;
 }
+
+/* Status dot glow effects */
+.dot-glow-green {
+  box-shadow: 0 0 6px 1px rgba(76, 175, 80, 0.6);
+}
+.dot-glow-red {
+  box-shadow: 0 0 6px 1px rgba(244, 67, 54, 0.6);
+}
+.dot-glow-yellow {
+  box-shadow: 0 0 6px 1px rgba(255, 193, 7, 0.5);
+}
