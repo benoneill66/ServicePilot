@@ -1,3 +1,10 @@
+export interface Workflow {
+  id: string;
+  name: string;
+  scriptIds: string[];
+  collapsed: boolean;
+}
+
 // Commands (frontend → sidecar via stdin)
 export type Command =
   | { type: "list" }
@@ -7,8 +14,14 @@ export type Command =
   | { type: "stop-all" }
   | { type: "add-repo"; path: string }
   | { type: "remove-repo"; path: string }
-  | { type: "toggle-favourite"; id: string }
-  | { type: "rename-script"; id: string; alias: string };
+  | { type: "rename-script"; id: string; alias: string }
+  | { type: "get-workflows" }
+  | { type: "create-workflow"; name: string; scriptIds: string[] }
+  | { type: "update-workflow"; id: string; name?: string; scriptIds?: string[]; collapsed?: boolean }
+  | { type: "delete-workflow"; id: string }
+  | { type: "reorder-workflows"; ids: string[] }
+  | { type: "start-workflow"; id: string }
+  | { type: "stop-workflow"; id: string };
 
 // Events (sidecar → frontend via stdout)
 export type Event =
@@ -21,10 +34,10 @@ export type Event =
         repoPath: string;
         port?: number;
         color: string;
-        favourite: boolean;
         alias?: string;
       }[];
     }
   | { type: "status"; id: string; status: string }
   | { type: "log"; id: string; text: string }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  | { type: "workflows"; workflows: Workflow[] };
