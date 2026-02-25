@@ -36,6 +36,7 @@ export default function App() {
     statuses,
     logs,
     error,
+    workflows,
     startService,
     stopService,
     restartService,
@@ -43,8 +44,12 @@ export default function App() {
     clearLog,
     addRepo,
     removeRepo,
-    toggleFavourite,
     renameScript,
+    createWorkflow,
+    updateWorkflow,
+    deleteWorkflow,
+    startWorkflow,
+    stopWorkflow,
   } = useSidecar();
 
   const [activeIndex, setActiveIndex] = useState(0);
@@ -126,6 +131,7 @@ export default function App() {
           width={sidebarWidth}
           services={services}
           statuses={statuses}
+          workflows={workflows}
           activeId={activeId}
           onSelect={(id) => {
             const idx = services.findIndex((s) => s.id === id);
@@ -136,8 +142,12 @@ export default function App() {
           onClearLog={clearLog}
           onAddRepo={handleAddRepo}
           onRemoveRepo={removeRepo}
-          onToggleFavourite={toggleFavourite}
           onRenameScript={renameScript}
+          onCreateWorkflow={createWorkflow}
+          onUpdateWorkflow={updateWorkflow}
+          onDeleteWorkflow={deleteWorkflow}
+          onStartWorkflow={startWorkflow}
+          onStopWorkflow={stopWorkflow}
         />
         {/* Drag handle */}
         <div
