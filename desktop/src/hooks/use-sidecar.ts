@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { Command as ShellCommand, Child } from "@tauri-apps/plugin-shell";
-import type { ServiceInfo, ServiceStatus, Command, SidecarEvent } from "../types";
+import type { ServiceInfo, ServiceStatus, Command, SidecarEvent, Workflow } from "../types";
 
 const MAX_LOG_LINES = 2000;
 
@@ -9,6 +9,7 @@ export function useSidecar() {
   const [services, setServices] = useState<ServiceInfo[]>([]);
   const [statuses, setStatuses] = useState<Record<string, ServiceStatus>>({});
   const [logs, setLogs] = useState<Record<string, string[]>>({});
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const send = useCallback(async (cmd: Command) => {
@@ -44,6 +45,9 @@ export function useSidecar() {
                   : combined,
               };
             });
+            break;
+          case "workflows":
+            setWorkflows(event.workflows);
             break;
           case "error":
             setError(event.message);
@@ -88,8 +92,25 @@ export function useSidecar() {
     [send]
   );
 
-  const toggleFavourite = useCallback(
-    (id: string) => send({ type: "toggle-favourite", id }),
+  const createWorkflow = useCallback(
+    (name: string, scriptIds: string[]) => send({ type: "create-workflow", name, scriptIds }),
+    [send]
+  );
+  const updateWorkflow = useCallback(
+    (id: string, name?: string, scriptIds?: string[], collapsed?: boolean) =>
+      send({ type: "update-workflow", id, name, scriptIds, collapsed }),
+    [send]
+  );
+  const deleteWorkflow = useCallback(
+    (id: string) => send({ type: "delete-workflow", id }),
+    [send]
+  );
+  const startWorkflow = useCallback(
+    (id: string) => send({ type: "start-workflow", id }),
+    [send]
+  );
+  const stopWorkflow = useCallback(
+    (id: string) => send({ type: "stop-workflow", id }),
     [send]
   );
 
@@ -110,7 +131,12 @@ export function useSidecar() {
     clearLog,
     addRepo,
     removeRepo,
-    toggleFavourite,
+    workflows,
+    createWorkflow,
+    updateWorkflow,
+    deleteWorkflow,
+    startWorkflow,
+    stopWorkflow,
     renameScript,
   };
 }
