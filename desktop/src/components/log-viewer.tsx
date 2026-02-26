@@ -34,6 +34,15 @@ export function LogViewer({ serviceName, serviceColor, lines, onClear }: Props) 
     });
   }, [lines.length]);
 
+  const [copied, setCopied] = useState(false);
+
+  const copyAll = useCallback(() => {
+    navigator.clipboard.writeText(lines.join("\n")).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [lines]);
+
   if (lines.length === 0) {
     return (
       <div className="flex-1 flex flex-col">
@@ -58,6 +67,12 @@ export function LogViewer({ serviceName, serviceColor, lines, onClear }: Props) 
         </span>
         <span className="text-text-dim">— logs</span>
         <span className="text-xs text-text-dim ml-auto">{lines.length} lines</span>
+        <button
+          onClick={copyAll}
+          className="text-xs text-text-dim hover:text-text px-2 py-0.5 rounded hover:bg-surface-hover transition"
+        >
+          {copied ? "Copied!" : "Copy All"}
+        </button>
         {onClear && (
           <button
             onClick={onClear}
@@ -75,7 +90,7 @@ export function LogViewer({ serviceName, serviceColor, lines, onClear }: Props) 
           atBottomThreshold={50}
           followOutput="smooth"
           itemContent={(index) => (
-            <div className="px-4 py-px hover:bg-surface-hover leading-5">
+            <div className="px-4 py-px hover:bg-surface-hover leading-5 select-text cursor-text">
               <Ansi>{lines[index]!}</Ansi>
             </div>
           )}
