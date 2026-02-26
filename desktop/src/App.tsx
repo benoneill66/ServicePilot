@@ -117,6 +117,7 @@ export default function App() {
     onStop: () => activeId && stopService(activeId),
     onStart: () => activeId && startService(activeId),
     onQuit: () => stopAll(),
+    onClearLog: () => activeId && clearLog(activeId),
   });
 
   return (
@@ -159,6 +160,7 @@ export default function App() {
             serviceName={`${activeService.repo} → ${activeService.alias ?? activeService.name}`}
             serviceColor={COLOR_MAP[activeService.color] ?? "#e0e0e0"}
             lines={logs[activeService.id] ?? []}
+            onClear={() => clearLog(activeService.id)}
           />
         ) : (
           <div className="flex-1 flex items-center justify-center text-text-dim">

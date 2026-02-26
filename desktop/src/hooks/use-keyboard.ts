@@ -8,6 +8,7 @@ interface Opts {
   onStop: () => void;
   onStart: () => void;
   onQuit: () => void;
+  onClearLog: () => void;
 }
 
 export function useKeyboard({
@@ -18,9 +19,17 @@ export function useKeyboard({
   onStop,
   onStart,
   onQuit,
+  onClearLog,
 }: Opts) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // Cmd+K: clear logs (works even in inputs)
+      if (e.metaKey && e.key === "k") {
+        e.preventDefault();
+        onClearLog();
+        return;
+      }
+
       // Ignore if user is typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
@@ -52,5 +61,5 @@ export function useKeyboard({
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [serviceIds, activeIndex, setActiveIndex, onRestart, onStop, onStart, onQuit]);
+  }, [serviceIds, activeIndex, setActiveIndex, onRestart, onStop, onStart, onQuit, onClearLog]);
 }

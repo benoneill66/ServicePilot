@@ -6,9 +6,10 @@ interface Props {
   serviceName: string;
   serviceColor: string;
   lines: string[];
+  onClear?: () => void;
 }
 
-export function LogViewer({ serviceName, serviceColor, lines }: Props) {
+export function LogViewer({ serviceName, serviceColor, lines, onClear }: Props) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [atBottom, setAtBottom] = useState(true);
 
@@ -57,6 +58,14 @@ export function LogViewer({ serviceName, serviceColor, lines }: Props) {
         </span>
         <span className="text-text-dim">— logs</span>
         <span className="text-xs text-text-dim ml-auto">{lines.length} lines</span>
+        {onClear && (
+          <button
+            onClick={onClear}
+            className="text-xs text-text-dim hover:text-text px-2 py-0.5 rounded hover:bg-surface-hover transition"
+          >
+            Clear
+          </button>
+        )}
       </div>
       <div className="flex-1">
         <Virtuoso
