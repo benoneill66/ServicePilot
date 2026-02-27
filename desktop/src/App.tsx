@@ -3,8 +3,9 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { useSidecar } from "./hooks/use-sidecar";
 import { useKeyboard } from "./hooks/use-keyboard";
 import { Sidebar } from "./components/sidebar";
-import { LogViewer } from "./components/log-viewer";
+import { LogGrid } from "./components/log-grid";
 import { StatusBar } from "./components/status-bar";
+import type { Panel } from "./types";
 
 // Map service color names to hex for the log header
 const COLOR_MAP: Record<string, string> = {
@@ -55,6 +56,12 @@ export default function App() {
   const [activeIndex, setActiveIndex] = useState(0);
   const activeService = services[activeIndex];
   const activeId = activeService?.id ?? null;
+
+  const panelCounter = useRef(1);
+  const [panels, setPanels] = useState<Panel[]>([
+    { id: "panel-0", serviceId: null },
+  ]);
+  const [focusedPanelId, setFocusedPanelId] = useState("panel-0");
 
   // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(loadSidebarWidth);
@@ -109,6 +116,46 @@ export default function App() {
     }
   }, [addRepo]);
 
+  const addPanel = useCallback(() => {
+    setPanels((prev) => {
+      if (prev.length >= 4) return prev;
+      const newId = `panel-${panelCounter.current++}`;
+      return [...prev, { id: newId, serviceId: null }];
+    });
+  }, []);
+
+  const removePanel = useCallback(
+    (panelId: string) => {
+      setPanels((prev) => {
+        if (prev.length <= 1) return prev;
+        const next = prev.filter((p) => p.id !== panelId);
+        if (panelId === focusedPanelId) {
+          setFocusedPanelId(next[0]!.id);
+        }
+        return next;
+      });
+    },
+    [focusedPanelId]
+  );
+
+  const changePanelService = useCallback(
+    (panelId: string, serviceId: string) => {
+      setPanels((prev) =>
+        prev.map((p) => (p.id === panelId ? { ...p, serviceId } : p))
+      );
+      const idx = services.findIndex((s) => s.id === serviceId);
+      if (idx !== -1) setActiveIndex(idx);
+    },
+    [services]
+  );
+
+  // Keep single-panel synced with sidebar selection
+  useEffect(() => {
+    if (panels.length === 1 && activeService) {
+      setPanels((prev) => [{ ...prev[0]!, serviceId: activeService.id }]);
+    }
+  }, [activeService?.id, panels.length]);
+
   useKeyboard({
     serviceIds: services.map((s) => s.id),
     activeIndex,
@@ -137,6 +184,11 @@ export default function App() {
           onSelect={(id) => {
             const idx = services.findIndex((s) => s.id === id);
             if (idx !== -1) setActiveIndex(idx);
+            setPanels((prev) =>
+              prev.map((p) =>
+                p.id === focusedPanelId ? { ...p, serviceId: id } : p
+              )
+            );
           }}
           onToggle={handleToggle}
           onRestart={restartService}
@@ -155,22 +207,31 @@ export default function App() {
           className="w-1 cursor-col-resize hover:bg-accent/40 active:bg-accent/60 transition-colors shrink-0"
           onMouseDown={onDragStart}
         />
-        {activeService ? (
-          <LogViewer
-            serviceName={`${activeService.repo} → ${activeService.alias ?? activeService.name}`}
-            serviceColor={COLOR_MAP[activeService.color] ?? "#e0e0e0"}
-            lines={logs[activeService.id] ?? []}
-            onClear={() => clearLog(activeService.id)}
-          />
-        ) : (
+        {services.length === 0 ? (
           <div className="flex-1 flex items-center justify-center text-text-dim">
-            {services.length === 0
-              ? "Import a repo to get started"
-              : "Select a script to view logs"}
+            Import a repo to get started
           </div>
+        ) : (
+          <LogGrid
+            panels={panels}
+            focusedPanelId={focusedPanelId}
+            services={services}
+            statuses={statuses}
+            logs={logs}
+            colorMap={COLOR_MAP}
+            onFocusPanel={setFocusedPanelId}
+            onChangePanelService={changePanelService}
+            onRemovePanel={removePanel}
+            onClearLog={clearLog}
+          />
         )}
       </div>
-      <StatusBar runningCount={runningCount} totalCount={services.length} />
+      <StatusBar
+        runningCount={runningCount}
+        totalCount={services.length}
+        panelCount={panels.length}
+        onAddPanel={addPanel}
+      />
     </div>
   );
 }
