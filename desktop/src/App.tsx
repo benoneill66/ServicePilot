@@ -165,6 +165,8 @@ export default function App() {
     onStart: () => activeId && startService(activeId),
     onQuit: () => stopAll(),
     onClearLog: () => activeId && clearLog(activeId),
+    onAddPanel: addPanel,
+    onRemovePanel: () => removePanel(focusedPanelId),
   });
 
   return (

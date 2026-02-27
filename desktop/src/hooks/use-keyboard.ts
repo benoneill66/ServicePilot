@@ -9,6 +9,8 @@ interface Opts {
   onStart: () => void;
   onQuit: () => void;
   onClearLog: () => void;
+  onAddPanel: () => void;
+  onRemovePanel: () => void;
 }
 
 export function useKeyboard({
@@ -20,6 +22,8 @@ export function useKeyboard({
   onStart,
   onQuit,
   onClearLog,
+  onAddPanel,
+  onRemovePanel,
 }: Opts) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -27,6 +31,19 @@ export function useKeyboard({
       if (e.metaKey && e.key === "k") {
         e.preventDefault();
         onClearLog();
+        return;
+      }
+
+      // Cmd+\: add split panel
+      if (e.metaKey && e.key === "\\") {
+        e.preventDefault();
+        onAddPanel();
+        return;
+      }
+      // Cmd+Shift+\: remove focused panel
+      if (e.metaKey && e.shiftKey && e.key === "|") {
+        e.preventDefault();
+        onRemovePanel();
         return;
       }
 
@@ -61,5 +78,5 @@ export function useKeyboard({
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [serviceIds, activeIndex, setActiveIndex, onRestart, onStop, onStart, onQuit, onClearLog]);
+  }, [serviceIds, activeIndex, setActiveIndex, onRestart, onStop, onStart, onQuit, onClearLog, onAddPanel, onRemovePanel]);
 }
