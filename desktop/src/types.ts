@@ -42,3 +42,8 @@ export type SidecarEvent =
   | { type: "log"; id: string; text: string }
   | { type: "error"; message: string }
   | { type: "workflows"; workflows: Workflow[] };
+
+export interface Panel {
+  id: string;
+  serviceId: string | null;
+}
