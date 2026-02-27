@@ -95,6 +95,7 @@ export function LogGrid({
                 serviceColor={colorMap[service.color] ?? "#e0e0e0"}
                 lines={logs[service.id] ?? []}
                 onClear={() => onClearLog(service.id)}
+                hideHeader
               />
             ) : (
               <div className="flex-1 flex items-center justify-center text-text-dim text-sm">

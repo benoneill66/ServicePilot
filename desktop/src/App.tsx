@@ -164,7 +164,11 @@ export default function App() {
     onStop: () => activeId && stopService(activeId),
     onStart: () => activeId && startService(activeId),
     onQuit: () => stopAll(),
-    onClearLog: () => activeId && clearLog(activeId),
+    onClearLog: () => {
+      const focusedPanel = panels.find((p) => p.id === focusedPanelId);
+      const targetId = focusedPanel?.serviceId ?? activeId;
+      if (targetId) clearLog(targetId);
+    },
     onAddPanel: addPanel,
     onRemovePanel: () => removePanel(focusedPanelId),
   });

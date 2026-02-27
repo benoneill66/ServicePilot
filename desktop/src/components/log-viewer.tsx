@@ -8,9 +8,10 @@ interface Props {
   serviceColor: string;
   lines: string[];
   onClear?: () => void;
+  hideHeader?: boolean;
 }
 
-export function LogViewer({ serviceName, serviceColor, lines, onClear }: Props) {
+export function LogViewer({ serviceName, serviceColor, lines, onClear, hideHeader }: Props) {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [atBottom, setAtBottom] = useState(true);
@@ -110,12 +111,14 @@ export function LogViewer({ serviceName, serviceColor, lines, onClear }: Props) 
   if (lines.length === 0) {
     return (
       <div className="flex-1 flex flex-col">
-        <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-          <span className="font-bold" style={{ color: serviceColor }}>
-            {serviceName}
-          </span>
-          <span className="text-text-dim">— logs</span>
-        </div>
+        {!hideHeader && (
+          <div className="px-4 py-3 border-b border-border flex items-center gap-2">
+            <span className="font-bold" style={{ color: serviceColor }}>
+              {serviceName}
+            </span>
+            <span className="text-text-dim">— logs</span>
+          </div>
+        )}
         <div className="flex-1 flex items-center justify-center text-text-dim">
           No output yet...
         </div>
@@ -126,10 +129,14 @@ export function LogViewer({ serviceName, serviceColor, lines, onClear }: Props) 
   return (
     <div className="flex-1 flex flex-col relative">
       <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-        <span className="font-bold" style={{ color: serviceColor }}>
-          {serviceName}
-        </span>
-        <span className="text-text-dim">— logs</span>
+        {!hideHeader && (
+          <>
+            <span className="font-bold" style={{ color: serviceColor }}>
+              {serviceName}
+            </span>
+            <span className="text-text-dim">— logs</span>
+          </>
+        )}
         <div className="flex items-center gap-1 ml-2">
           {(["error", "warn", "info", "debug"] as LogLevel[]).map((level) => {
             const enabled = enabledLevels[level];
