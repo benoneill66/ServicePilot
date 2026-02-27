@@ -1,17 +1,13 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import Ansi from "ansi-to-react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
+import { detectLogLevel, stripAnsi, type LogLevel } from "../utils/log-levels";
 
 interface Props {
   serviceName: string;
   serviceColor: string;
   lines: string[];
   onClear?: () => void;
-}
-
-// Strip ANSI escape codes for search matching
-function stripAnsi(text: string): string {
-  return text.replace(/\x1b\[[0-9;]*m/g, "");
 }
 
 export function LogViewer({ serviceName, serviceColor, lines, onClear }: Props) {
@@ -21,11 +17,43 @@ export function LogViewer({ serviceName, serviceColor, lines, onClear }: Props) 
   const [filter, setFilter] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
+  const [enabledLevels, setEnabledLevels] = useState<Record<LogLevel, boolean>>({
+    error: true,
+    warn: true,
+    info: true,
+    debug: true,
+  });
+
+  // Used by filter toggle buttons added in a later task
+  // @ts-expect-error -- toggleLevel is wired up in the next task (filter UI)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const toggleLevel = useCallback((level: LogLevel) => {
+    setEnabledLevels((prev) => ({ ...prev, [level]: !prev[level] }));
+  }, []);
+
+  const leveledLines = useMemo(
+    () => lines.map((text) => ({ text, level: detectLogLevel(text) })),
+    [lines]
+  );
+
   const filtered = useMemo(() => {
-    if (!filter) return lines;
-    const lower = filter.toLowerCase();
-    return lines.filter((l) => stripAnsi(l).toLowerCase().includes(lower));
-  }, [lines, filter]);
+    let result = leveledLines;
+    // Level filter
+    const anyDisabled = Object.values(enabledLevels).some((v) => !v);
+    if (anyDisabled) {
+      result = result.filter(
+        (l) => l.level === null || enabledLevels[l.level]
+      );
+    }
+    // Text search filter
+    if (filter) {
+      const lower = filter.toLowerCase();
+      result = result.filter((l) =>
+        stripAnsi(l.text).toLowerCase().includes(lower)
+      );
+    }
+    return result;
+  }, [leveledLines, enabledLevels, filter]);
 
   // Auto-scroll when new lines arrive and user is at bottom
   useEffect(() => {
@@ -51,7 +79,7 @@ export function LogViewer({ serviceName, serviceColor, lines, onClear }: Props) 
   const [copied, setCopied] = useState(false);
 
   const copyAll = useCallback(() => {
-    navigator.clipboard.writeText(filtered.join("\n")).then(() => {
+    navigator.clipboard.writeText(filtered.map(l => l.text).join("\n")).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     });
@@ -168,11 +196,24 @@ export function LogViewer({ serviceName, serviceColor, lines, onClear }: Props) 
           atBottomStateChange={handleAtBottomChange}
           atBottomThreshold={50}
           followOutput={filter ? false : "smooth"}
-          itemContent={(index) => (
-            <div className="px-4 py-px hover:bg-surface-hover leading-5 select-text cursor-text">
-              <Ansi>{filtered[index]!}</Ansi>
-            </div>
-          )}
+          itemContent={(index) => {
+            const { text, level } = filtered[index]!;
+            const borderClass =
+              level === "error"
+                ? "border-l-3 border-l-red bg-red/5"
+                : level === "warn"
+                  ? "border-l-3 border-l-yellow bg-yellow/5"
+                  : level === "debug"
+                    ? "border-l-3 border-l-text-dim"
+                    : "";
+            return (
+              <div
+                className={`px-4 py-px hover:bg-surface-hover leading-5 select-text cursor-text ${borderClass}`}
+              >
+                <Ansi>{text}</Ansi>
+              </div>
+            );
+          }}
         />
       </div>
       {!atBottom && (
