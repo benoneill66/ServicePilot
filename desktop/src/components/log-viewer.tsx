@@ -24,9 +24,6 @@ export function LogViewer({ serviceName, serviceColor, lines, onClear }: Props) 
     debug: true,
   });
 
-  // Used by filter toggle buttons added in a later task
-  // @ts-expect-error -- toggleLevel is wired up in the next task (filter UI)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const toggleLevel = useCallback((level: LogLevel) => {
     setEnabledLevels((prev) => ({ ...prev, [level]: !prev[level] }));
   }, []);
@@ -133,8 +130,38 @@ export function LogViewer({ serviceName, serviceColor, lines, onClear }: Props) 
           {serviceName}
         </span>
         <span className="text-text-dim">— logs</span>
+        <div className="flex items-center gap-1 ml-2">
+          {(["error", "warn", "info", "debug"] as LogLevel[]).map((level) => {
+            const enabled = enabledLevels[level];
+            const colors: Record<LogLevel, string> = {
+              error: "text-red border-red",
+              warn: "text-yellow border-yellow",
+              info: "text-accent border-accent",
+              debug: "text-text-dim border-text-dim",
+            };
+            const labels: Record<LogLevel, string> = {
+              error: "ERR",
+              warn: "WARN",
+              info: "INFO",
+              debug: "DBG",
+            };
+            return (
+              <button
+                key={level}
+                onClick={() => toggleLevel(level)}
+                className={`text-[10px] px-1.5 py-0.5 rounded border transition ${
+                  enabled
+                    ? `${colors[level]} bg-transparent`
+                    : "text-text-dim/40 border-text-dim/20 line-through"
+                }`}
+              >
+                {labels[level]}
+              </button>
+            );
+          })}
+        </div>
         <span className="text-xs text-text-dim ml-auto">
-          {filter
+          {filter || Object.values(enabledLevels).some((v) => !v)
             ? `${filtered.length} / ${lines.length} lines`
             : `${lines.length} lines`}
         </span>
