@@ -11,6 +11,7 @@ interface Opts {
   onClearLog: () => void;
   onAddPanel: () => void;
   onRemovePanel: () => void;
+  onToggleTerminal: () => void;
 }
 
 export function useKeyboard({
@@ -24,6 +25,7 @@ export function useKeyboard({
   onClearLog,
   onAddPanel,
   onRemovePanel,
+  onToggleTerminal,
 }: Opts) {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -47,8 +49,19 @@ export function useKeyboard({
         return;
       }
 
-      // Ignore if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      // Cmd+`: toggle terminal
+      if (e.metaKey && e.key === "`") {
+        e.preventDefault();
+        onToggleTerminal();
+        return;
+      }
+
+      // Ignore if user is typing in an input or terminal
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target instanceof HTMLElement && e.target.closest(".xterm"))
+      ) return;
 
       const num = parseInt(e.key, 10);
       if (num >= 1 && num <= serviceIds.length) {
@@ -78,5 +91,5 @@ export function useKeyboard({
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [serviceIds, activeIndex, setActiveIndex, onRestart, onStop, onStart, onQuit, onClearLog, onAddPanel, onRemovePanel]);
+  }, [serviceIds, activeIndex, setActiveIndex, onRestart, onStop, onStart, onQuit, onClearLog, onAddPanel, onRemovePanel, onToggleTerminal]);
 }

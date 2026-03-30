@@ -1,10 +1,12 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
 import { useSidecar } from "./hooks/use-sidecar";
 import { useKeyboard } from "./hooks/use-keyboard";
 import { Sidebar } from "./components/sidebar";
 import { LogGrid } from "./components/log-grid";
 import { StatusBar } from "./components/status-bar";
+import { TerminalDrawer, type TerminalTab } from "./components/terminal-drawer";
 import type { Panel } from "./types";
 
 // Map service color names to hex for the log header
@@ -62,6 +64,52 @@ export default function App() {
     { id: "panel-0", serviceId: null },
   ]);
   const [focusedPanelId, setFocusedPanelId] = useState("panel-0");
+
+  // Terminal state
+  const [terminalOpen, setTerminalOpen] = useState(false);
+  const [terminalTabs, setTerminalTabs] = useState<TerminalTab[]>([]);
+  const [activeTerminalId, setActiveTerminalId] = useState<number | null>(null);
+  const terminalCounter = useRef(1);
+
+  const createNewTerminal = useCallback(async (cwd?: string) => {
+    try {
+      const id = await invoke<number>("create_terminal", { cwd });
+      const name = `Terminal ${terminalCounter.current++}`;
+      setTerminalTabs((prev) => [...prev, { id, name }]);
+      setActiveTerminalId(id);
+      return id;
+    } catch (e) {
+      console.error("Failed to create terminal:", e);
+      return null;
+    }
+  }, []);
+
+  const closeTerminal = useCallback(async (id: number) => {
+    try {
+      await invoke("close_terminal", { id });
+    } catch {}
+    setTerminalTabs((prev) => {
+      const next = prev.filter((t) => t.id !== id);
+      if (next.length === 0) {
+        setTerminalOpen(false);
+        setActiveTerminalId(null);
+      } else if (id === activeTerminalId) {
+        setActiveTerminalId(next[next.length - 1]!.id);
+      }
+      return next;
+    });
+  }, [activeTerminalId]);
+
+  const toggleTerminal = useCallback(async () => {
+    if (terminalOpen) {
+      setTerminalOpen(false);
+    } else {
+      setTerminalOpen(true);
+      if (terminalTabs.length === 0) {
+        await createNewTerminal();
+      }
+    }
+  }, [terminalOpen, terminalTabs.length, createNewTerminal]);
 
   // Resizable sidebar
   const [sidebarWidth, setSidebarWidth] = useState(loadSidebarWidth);
@@ -171,6 +219,7 @@ export default function App() {
     },
     onAddPanel: addPanel,
     onRemovePanel: () => removePanel(focusedPanelId),
+    onToggleTerminal: toggleTerminal,
   });
 
   return (
@@ -232,11 +281,21 @@ export default function App() {
           />
         )}
       </div>
+      <TerminalDrawer
+        open={terminalOpen}
+        tabs={terminalTabs}
+        activeTabId={activeTerminalId}
+        onSetActiveTab={setActiveTerminalId}
+        onNewTerminal={() => createNewTerminal()}
+        onCloseTerminal={closeTerminal}
+      />
       <StatusBar
         runningCount={runningCount}
         totalCount={services.length}
         panelCount={panels.length}
         onAddPanel={addPanel}
+        terminalOpen={terminalOpen}
+        onToggleTerminal={toggleTerminal}
       />
     </div>
   );
